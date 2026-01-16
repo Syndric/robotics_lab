@@ -2,4 +2,4 @@ build/**
 devel/**
 .env
 .claude/**
-
+src/CMakeLists.txt
