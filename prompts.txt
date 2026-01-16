@@ -1,0 +1,61 @@
+1/16/25
+Devops 
+Docker Composition
+# Objective
+For a class, we are using ROS. The labs are meant to be done on native linux environment. I would like to be able to use it on my Windows computer via Docker. To do this, we will create a dockerfile and a dockercompose. Note that we are using ROS and not ROS2.
+
+# Specifications
+* The dockerfile must align with the lab 1 instructions.
+* The dockercompose should mount src and doc. Of course, catkin make requires that we have a build and devel folder, so some setup must be done there too. If you do so, please make those as separate docker volumes.
+
+# Other information
+Here are the "setup instructions" for lab 1:
+**Task 1: Setup the user account in the laptop  
+**
+
+- The TA will log in to his account in the laptop
+- Open terminal by pressing _Ctrl + Alt + T_
+- In the terminal type _sudo adduser <yourUserName>_            
+- Ask the TA to put the sudo password
+- Fill in the new UNIX password that you would be using for entire course and write it down so you remember it.
+- Once done, log out of current user profile and log into your profile that you just made
+- After logging into your profile, open terminal (_Ctrl+Alt+T_) and type following commands (or you can copy all of them once and paste in the terminal using Ctrl + Shift + V; execute)
+
+- sudo apt update && sudo apt install terminator -y
+- cd
+- mkdir -p ~/catkin_ws/src
+- cd catkin_ws
+- catkin_make
+- echo "source $HOME/catkin_ws/devel/setup.bash" >> ~/.bashrc
+- source ~/.bashrc
+- echo 'source /opt/ros/noetic/setup.bash' >> ~/.bashrc
+- source ~/.bashrc
+- cd
+
+- Once done, type roscore in terminal and verify that ros master core runs correctly. Capture screenshot of this terminal and submit **[1 pt]**
+
+---
+
+**Task 2: Complete the beginner-level ROS Tutorials** (Python track) available at [http://wiki.ros.org/ROS/Tutorials#Beginner_LevelLinks to an external site.](http://wiki.ros.org/ROS/Tutorials#Beginner_Level).
+
+You are required to complete tutorials 2 through 19, except for tutorials 9, 11, 14, and 18. Additionally, skip sections 1 and 2.1 of tutorial 8.
+
+---
+
+Useful Notes
+
+1. Ensure to select 'Ubuntu' at the grub prompt when rebooting machines.
+2. Add the command "source /opt/ros/noetic/setup.bash" to your ~/.bashrc file.
+3. During the tutorial on topics, remember to teleoperate the turtle by pressing keys in the text window, rather than on the graphic display.
+4. Utilize VSCode or gedit for code writing.
+5. In tutorial 12, change the permission of any created python files to executable using the command "chmod +x".
+6. Avoid terminating roscore; it must remain running for most of the tutorial.
+7. For tutorials involving the creation of your own nodes and services, remember to source the catkin make directory by executing "source devel/setup.bash" to correctly set paths for the beginner_tutorials modules.
+8. Python scripts typically begin with the shebang line "#!/usr/bin/env python3".
+9. Slides: [Lab 1Links to an external site.](https://docs.google.com/presentation/d/1PorCXAHUKFoHr79zaqY0AHgRi0TPz-796iUGo4pje50/edit?usp=sharing "Link")
+10. sudo rosdep init
+11. sudo rm -rf /etc/ros/rosdep/sources.list.d/20-default.list
+12. sudo rosdep init
+13. rosdep update
+
+------------------------------------------------------------------------------
