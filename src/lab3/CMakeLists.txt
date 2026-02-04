@@ -163,6 +163,10 @@ catkin_install_python(PROGRAMS
   #scripts/listener.py
   #scripts/add_two_ints_server.py
   #scripts/add_two_ints_client.py
+  scripts/go_to_goal.py
+  scripts/marker.py
+  scripts/path.py
+  scripts/bad_square.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

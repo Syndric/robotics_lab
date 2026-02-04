@@ -1,99 +1,187 @@
 #!/usr/bin/env python3
 
-# Import necessary ROS libraries
-import rospy  # Python client library for ROS
-from geometry_msgs.msg import Twist  # Message type for controlling robot motion
-import math  # For converting degrees to radians
+import rospy
+from geometry_msgs.msg import Twist
+from nav_msgs.msg import Odometry
+from math import atan2, sqrt, radians, degrees
+from tf.transformations import euler_from_quaternion
 
-def move_turtle(pub, linear_speed, distance):
-    # Create a Twist message object to hold velocity commands
-    move_cmd = Twist()
+class TurtleBotWaffleController:
+    def __init__(self, use_controller=True):
+        # Initialize the ROS node
+        rospy.init_node('turtlebot3_waffle_goal_navigator', anonymous=True)
 
-    # Set the linear velocity for forward movement
-    move_cmd.linear.x = linear_speed  
-    move_cmd.angular.z = 0.0  # No rotation (angular velocity)
+        # Flag to control whether to use P-controller or constant velocity
+        self.use_controller = use_controller
 
-    # Calculate the time duration using time = distance / speed
-    time_duration = distance / linear_speed
+        # Publisher for robot's velocity commands
+        self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
-    # Set the rate at which to send messages (10 messages per second)
-    rate = rospy.Rate(200)
+        # Subscriber to robot's odometry data
+        self.sub = rospy.Subscriber('/odom', Odometry, self.odom_callback)
 
-    # Inform the user that the node has started
-    rospy.loginfo(f"Moving the turtle forward by {distance} meters at {linear_speed} m/s...")
+        # Control loop rate
+        self.rate = rospy.Rate(10)
 
-    # Get the start time (in seconds) using rospy.get_time()
-    start_time = rospy.get_time()
+        # Initialize variables for robot's position and orientation
+        self.x = 0.0
+        self.y = 0.0
+        self.yaw = 0.0
+        self.yaw_deg = 0.0  # Initialize yaw in degrees
 
-    # Move the turtle for the calculated time duration
-    while rospy.get_time() - start_time < time_duration:
-        # Publish the Twist message to the /turtle1/cmd_vel topic
-        pub.publish(move_cmd)
+        # Set the goal position (customize as needed)
+        self.goal_x = 0.0  # Change this value to set a different goal
+        self.goal_y = 0.0  # Change this value to set a different goal
 
-        # Sleep to maintain the desired rate
-        rate.sleep()
+        # Proportional control gains (used if P-controller is enabled)
+        self.Kp_linear = 0.6   # Gain for linear velocity
+        self.Kp_angular = 1.5  # Gain for angular velocity
 
-    # Stop the turtle after moving the desired distance
-    move_cmd.linear.x = 0.0  # Stop moving forward
-    pub.publish(move_cmd)
+        # Tolerance for reaching the goal
+        self.goal_tolerance = 0.05  # Stop within 5 cm of the goal
 
-    rospy.loginfo("Turtle has stopped moving.")
+    def odom_callback(self, msg):
+        '''Callback function to update the robot's current position and orientation from /odom.'''
+        # Extract the current position (x, y) from the odometry message
+        self.x = msg.pose.pose.position.x
+        self.y = msg.pose.pose.position.y
 
-def rotate_turtle(pub, angle_degrees, angular_speed_rads):
-    # Create a Twist message object to hold velocity commands
-    rotate_cmd = Twist()
+        # Extract the orientation in quaternion and convert to Euler (yaw)
+        orientation_q = msg.pose.pose.orientation
+        orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
+        _, _, self.yaw = euler_from_quaternion(orientation_list)
 
-    # Convert the input angle from degrees to radians
-    angle_radians = math.radians(angle_degrees)
+        # Convert yaw to degrees and update yaw_deg
+        self.yaw_deg = degrees(self.yaw)
 
-    # Calculate the required time for the rotation using the formula time = angle / speed
-    time_duration = angle_radians / angular_speed_rads
+        # Print the current position of the robot
+        rospy.loginfo(f"Current Position -> x: {self.x:.2f} meters, y: {self.y:.2f} meters, yaw: {self.yaw_deg:.2f} degrees")
 
-    # Set the angular speed in the Twist message
-    rotate_cmd.linear.x = 0.0  # No linear movement (we're only rotating)
-    rotate_cmd.angular.z = angular_speed_rads  # Set the angular velocity for rotation
+    def rotate_turtle(self, angular_speed_rads, angle_to_goal_deg):
+        '''Rotate the turtle to face the goal'''
+        rotate_cmd = Twist()
 
-    # Set the rate at which to send messages (10 messages per second)
-    rate = rospy.Rate(200)
+        # Set angular velocity directly in radians per second
+        rotate_cmd.angular.z = angular_speed_rads
 
-    # Inform the user that the node has started
-    rospy.loginfo(f"Rotating the turtle by {angle_degrees} degrees at {angular_speed_rads} radians/second...")
+        rospy.loginfo(f"Rotating by {angle_to_goal_deg:.2f} degrees to face the goal")
 
-    # Get the start time (in seconds) using rospy.get_time()
-    start_time = rospy.get_time()
+        # TODO: Calculate time duration to rotate using the angle and angular speed
+        # Hint: time = angle / angular speed
+        time_duration = angle_diff_deg / degrees(angular_speed_rads)
 
-    # Rotate the turtle for the calculated time duration
-    while rospy.get_time() - start_time < time_duration:
-        # Publish the Twist message to the /turtle1/cmd_vel topic
-        pub.publish(rotate_cmd)
+        # Get the start time
+        start_time = rospy.get_time()
 
-        # Sleep to maintain the desired rate
-        rate.sleep()
+        # Rotate the turtle for the calculated time duration
+        while rospy.get_time() - start_time < time_duration:
+            self.pub.publish(rotate_cmd)
+            self.rate.sleep()
 
-    # Stop the turtle after rotating the desired angle
-    rotate_cmd.angular.z = 0.0  # Stop rotating
-    pub.publish(rotate_cmd)
+        # Stop the rotation
+        rotate_cmd.angular.z = 0.0
+        self.pub.publish(rotate_cmd)
 
-    rospy.loginfo(f"Turtle has stopped rotating after {angle_degrees} degrees.")
+    def move_turtle(self, linear_speed, distance):
+        '''Move the turtle forward towards the goal'''
+        move_cmd = Twist()
+        move_cmd.linear.x = linear_speed
+
+        rospy.loginfo(f"Moving the turtle forward by {distance:.2f} meters")
+
+        # TODO: Calculate time duration to move using the distance and linear speed
+        time_duration = distance / linear_speed
+
+        # Get the start time
+        start_time = rospy.get_time()
+
+        # Move the turtle forward for the calculated time duration
+        while rospy.get_time() - start_time < time_duration:
+            self.pub.publish(move_cmd)
+            self.rate.sleep()
+
+        # Stop the movement
+        move_cmd.linear.x = 0.0
+        self.pub.publish(move_cmd)
+        
+    def stop(self):
+        stop_cmd = Twist()
+        stop_cmd.linear.x = 0.0
+        stop_cmd.angular.z = 0.0
+        self.pub.publish(stop_cmd)
+        
+    def navigate_to_goal(self, x, y):
+        '''Main function to navigate the TurtleBot to the goal'''
+        self.goal_x = x
+        self.goal_y = y
+        # Step 1: Calculate the angle to the goal in degrees
+        angle_to_goal = atan2(self.goal_y - self.y, self.goal_x - self.x)
+
+        # TODO: Convert angle to degrees
+        angle_to_goal_deg = degrees(angle_to_goal)
+
+        # Step 2: Calculate the distance to the goal
+        distance_to_goal = sqrt((self.goal_x - self.x)**2 + (self.goal_y - self.y)**2)
+
+        if self.use_controller:
+            # P-Controller Mode
+            rospy.loginfo("Navigating using P-Controller")
+            self.p_controller_navigate(distance_to_goal, angle_to_goal_deg)
+        else:
+            # Non-Controlled Mode (Direct Navigation)
+            self.rotate_turtle(0.26, angle_to_goal_deg)  # Rotate to face the goal at 0.5 rad/sec
+            self.stop()
+            rospy.sleep(1)
+            self.move_turtle(1.82, distance_to_goal)  # Move towards the goal
+        self.stop()
+
+    def p_controller_navigate(self, distance_to_goal, angle_to_goal_deg):
+        '''Navigate using a P-Controller'''
+        rospy.loginfo(f"Navigating using P-Controller to goal at ({self.goal_x} meters, {self.goal_y} meters)")
+
+        complete = False
+        while not rospy.is_shutdown()
+            # Recalculate distance and angle each iteration
+            distance_to_goal = sqrt((self.goal_x - self.x)**2 + (self.goal_y - self.y)**2)
+            desired_angle = atan2(self.goal_y - self.y, self.goal_x - self.x)
+            
+            # TODO: Convert desired angle to degrees
+            desired_angle_deg = degrees(desired_angle)
+
+            angle_diff_deg = desired_angle_deg - self.yaw_deg
+
+            move_cmd = Twist()
+
+            complete = distance_to_goal < self.goal_tolerance
+            if complete:
+                rospy.loginfo("Goal reached, stopping robot")
+                self.pub.publish(Twist())  # Stop the robot
+                break
+
+            else:
+                # TODO: Calculate the linear velocity based on the distance error
+                move_cmd.linear.x = self.Kp_linear * (distance_to_goal)
+
+                # TODO: Calculate the angular velocity based on the angle error
+                move_cmd.angular.z = self.Kp_angular * radians(angle_diff_deg)
+
+                # Limit the velocities for safety (max linear and angular speed)
+                move_cmd.linear.x = min(move_cmd.linear.x, 0.5)  # Max linear speed: 0.3 m/s
+                move_cmd.angular.z = min(move_cmd.angular.z, 1.0)  # Max angular speed: 45 deg/s
+
+                # Publish the velocity command to move the robot
+                self.pub.publish(move_cmd)
+
+                # Print current distance and angle difference to goal
+                rospy.loginfo(f"Distance to goal: {distance_to_goal:.2f} meters, Angle difference: {angle_diff_deg:.2f} degrees")
+
+            self.rate.sleep()
 
 if __name__ == '__main__':
     try:
-        # Initialize the ROS node for this script
-        rospy.init_node('square_turtle_node', anonymous=True)
-        
-        # Create a publisher that publishes to the /turtle1/cmd_vel topic with message type Twist
-        pub = rospy.Publisher('/turtle1/cmd_vel', Twist, queue_size=10)
-        
-        # Set the linear velocity (in meters/second) and distance (in meters)
-        linear_speed = 1  # Example: 0.5 m/s
-        distance = 2  # Example: 2 meters
-
-        # Run the move_turtle function with specified linear speed and distance
-        while not rospy.is_shutdown():
-            move_turtle(pub, linear_speed, distance)
-            rotate_turtle(pub, 90, 1)
-
+        # Instantiate the controller with a flag to use or not use the P-Controller
+        controller = TurtleBotWaffleController(use_controller=True)  # Set to False to disable P-Controller
+        controller.navigate_to_goal(3, 2)
+        controller.navigate_to_goal(3, 3)
     except rospy.ROSInterruptException:
-        # Handle exceptions and clean up if needed
         pass
-
