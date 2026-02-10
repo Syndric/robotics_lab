@@ -23,6 +23,10 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y \
+    ros-noetic-urdf
+    && rm -rf /var/lib/apt/lists/*
+
 # Initialize rosdep (if not already done)
 RUN rosdep update || true
 
@@ -39,6 +43,7 @@ RUN echo "source /opt/ros/noetic/setup.bash" >> /root/.bashrc && \
 ENV ROS_PACKAGE_PATH=/catkin_ws/src:/opt/ros/noetic/share
 ENV ROS_MASTER_URI=http://localhost:11311
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV TURTLEBOT3_MODEL=waffle
 
 # Copy entrypoint script
 COPY docker-entrypoint.sh /docker-entrypoint.sh
